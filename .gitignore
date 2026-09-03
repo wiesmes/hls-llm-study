@@ -1,0 +1,5 @@
+build/
+*.log
+.Xil/
+vitis_hls.log
+__pycache__/
