@@ -3,3 +3,9 @@ build/
 .Xil/
 vitis_hls.log
 __pycache__/
+build/
+vivado-boards/
+*.log
+.hls.failed
+dfx_runtime.txt
+*.jou
