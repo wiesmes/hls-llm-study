@@ -1,0 +1,2 @@
+label,timestamp,top,part,target_period_ns,estimated_period_ns,latency_min,latency_max,interval_min,lut,ff,bram,dsp,uram
+vecadd_naive,2026-09-08T14:41:08,vecadd,xc7z020-clg400-1,10.00,7.256,262,262,256,492,297,0,2,0

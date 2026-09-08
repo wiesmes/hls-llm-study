@@ -1,30 +1,30 @@
 # Batch-mode Vitis HLS run. No GUI, ever.
 #
-# Usage:
-#   vitis_hls -f run_hls.tcl -tclargs <top> <src.cpp> <tb.cpp> <part> <period_ns> <proj_dir>
+# Usage (called by the Makefile, which sets these environment variables):
+#   HLS_TOP HLS_SRC HLS_TB HLS_PART HLS_PERIOD HLS_PROJ
+#   vitis-run --mode hls --tcl scripts/run_hls.tcl
 
-set top      [lindex $argv 0]
-set src      [lindex $argv 1]
-set tb       [lindex $argv 2]
-set part     [lindex $argv 3]
-set period   [lindex $argv 4]
-set proj_dir [lindex $argv 5]
+set top      $::env(HLS_TOP)
+set src      $::env(HLS_SRC)
+set tb       $::env(HLS_TB)
+set part     $::env(HLS_PART)
+set period   $::env(HLS_PERIOD)
+set proj_dir $::env(HLS_PROJ)
 
-open_project -reset $proj_dir
+# Absolute paths everywhere. HLS mangles relative paths for nested
+# project directories and silently drops the design file from csim.
+open_component -reset [file normalize $proj_dir] -flow_target vivado
 set_top $top
-add_files $src
-add_files -tb $tb
-
-open_solution -reset "solution1" -flow_target vivado
+add_files [file normalize $src]
+add_files -tb [file normalize $tb]
 set_part $part
 create_clock -period $period -name default
 
-# 1. Correctness gate. If the testbench returns non-zero, this errors out
-#    and synthesis below never runs.
+# 1. Correctness gate.
 csim_design
 
-# 2. Synthesis. Produces the latency / resource report we parse.
+# 2. Synthesis.
 csynth_design
 
-close_project
+close_component
 exit
