@@ -1,0 +1,59 @@
+You are optimizing a matrix multiplication kernel for FPGA hardware.
+
+1. Task
+Optimize the Vitis HLS 2025.2 C++ kernel below for a Xilinx Zynq-7020 FPGA, part number xc7z020clg400-1, at a 100 MHz target clock. Your primary goal is to minimize the kernel's latency while staying within these resource limits:
+
+* DSP: no more than 220
+* BRAM: no more than 140
+* LUT: no more than 53,000
+
+The build flow disables automatic loop pipelining, so only directives written in the source take effect. Use the synthesis results and warnings provided below to decide what to change. The implementation must remain synthesizable by Vitis HLS 2025.2.
+
+2. Hard rules
+* Keep the function name exactly `gemm`.
+* Keep the function signature exactly as declared in gemm.h.
+* Do not edit, replace, or assume changes to gemm.h.
+* The output must compute the same result as the original kernel. A testbench will check this, so do not change the mathematical behavior.
+* Use integer arithmetic only. Do not introduce floating-point arithmetic.
+* Stay compatible with the types, dimensions, and constants defined in gemm.h.
+* Do not rely on software-only behavior or unsupported compiler features.
+* Return only the complete C++ source file inside one cpp code block. Comments inside the code are welcome. Do not include explanations, analysis, or any other text outside the code block.
+
+3. Header and interface context
+The complete content of gemm.h. Treat it as fixed.
+
+```cpp
+{header}
+```
+
+4. Current kernel
+The complete C++ file you must improve. Use it as the starting point for this attempt.
+
+```cpp
+{kernel}
+```
+
+5. Last synthesis result
+Measurements from the previous synthesis run of the current kernel. Use them as evidence when choosing the next change.
+
+```text
+{metrics}
+```
+
+Initiation-interval or scheduling warnings from the synthesis log, if any. An empty block means none were recorded.
+
+```text
+{warnings}
+```
+
+Interpret the reported latency, initiation interval, and resource usage carefully. Do not assume a change improves performance just because it looks more parallel in the source code.
+
+6. History of previous attempts in this run
+Earlier attempts and their synthesis results, if any. Use it to avoid repeating changes that failed, exceeded the resource limits, or did not improve latency. An empty block means this is the first attempt.
+
+```text
+{history}
+```
+
+Choose one meaningful change based on the current kernel, the latest synthesis result, the warnings, and the history. Preserve correctness and the fixed interface above.
+Return only the complete updated C++ file inside one cpp code block.
