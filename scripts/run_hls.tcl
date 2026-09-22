@@ -19,6 +19,7 @@ add_files [file normalize $src]
 add_files -tb [file normalize $tb]
 set_part $part
 create_clock -period $period -name default
+config_compile -pipeline_loops 0
 
 # 1. Correctness gate.
 csim_design
