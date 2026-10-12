@@ -21,6 +21,11 @@ PROMPT = ROOT/"prompts/gemm_optimize.txt"
 RESULTS = ROOT/"results" / "results.csv"
 LOG_DIR = ROOT/"logs/llm_logs"
 START_LABEL = "gemm_unopt"
+MAX_DSP = 220
+MAX_BRAM = 280      # BRAM_18K units, as reported by HLS
+MAX_LUT = 53200
+MAX_FF = 106400
+MAX_PERIOD_NS = 10.0
 
 # Part 3: extract_code(reply) -> code string or None
 def extract_code(reply):
@@ -37,6 +42,27 @@ def find_row(label):
 
 def format_metrics(row):
     return "\n".join(f"{key}: {value}" for key, value in row.items())
+
+def get_warnings(name):
+    """Return the useful lines from this run's HLS log, or "" if there's no log."""
+    log_path = ROOT/"build"/f"gemm_gemm_{name}"/"hls"/"hls.log"
+    if not log_path.exists():
+        return ""
+    kept =[]
+    for line in log_path.read_text(encoding = "utf-8", errors = "ignore").splitlines():
+        if "WARNING" in line or "ERROR" in line or "Pipelining result" in line or "Loop Constraint Status" in line:
+            kept.append(line[:300])
+    return "\n".join(kept)
+
+def classify(row):
+    """Return 'build_fail', 'over_limit', 'timing_fail', or 'ok' for a run_variant result."""
+    if row is None:
+        return "build_fail"
+    if float(row["dsp"]) > MAX_DSP or float(row["bram"]) > MAX_BRAM or float(row["lut"]) > MAX_LUT or float(row["ff"]) > MAX_FF:
+        return "over_limit"
+    if float(row["estimated_period_ns"]) > MAX_PERIOD_NS:
+        return "timing_fail"
+    return "ok"
 
 # Part 5: build_prompt(kernel, metrics) -> the filled-in prompt
 
