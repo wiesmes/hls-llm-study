@@ -5,8 +5,8 @@ import requests
 
 # Step 1: the address and the model name (the URL and "model" from the curl test)
 OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "fake-model"
-#OLLAMA_MODEL = "qwen2.5-coder:7b"
+#OLLAMA_MODEL = "fake-model"
+OLLAMA_MODEL = "qwen2.5-coder:7b"
 # Step 2: define ask(prompt) and build the data to send
 def ask(prompt):
     payload = {
