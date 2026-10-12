@@ -1,6 +1,6 @@
 # One command in, one CSV row out.
 #
-#   make bench KERNEL=vecadd
+#   make bench KERNEL=gemm
 #
 # Requires vitis-run (Vivado/Vitis 2025.2) and GNU make on PATH.
 
@@ -9,11 +9,13 @@ PART   ?= xc7z020clg400-1
 # target clock period in ns (10ns = 100 MHz)
 PERIOD ?= 10
 
-KERNEL ?= vecadd
-LABEL  ?= $(KERNEL)_naive
+KERNEL  ?= gemm
+VARIANT ?=
+LABEL   ?= $(KERNEL)$(if $(VARIANT),_$(VARIANT),_naive)
 
 KDIR   := kernels/$(KERNEL)
-SRC    := $(KDIR)/$(KERNEL).cpp
+#SRC    := $(KDIR)/$(KERNEL).cpp  --> Changed to support variants of the kernel, e.g., gemm_optimized.cpp
+SRC     := $(KDIR)/$(KERNEL)$(if $(VARIANT),_$(VARIANT)).cpp
 TB     := $(KDIR)/tb_$(KERNEL).cpp
 PROJ   := build/$(KERNEL)_$(LABEL)
 CSV    := results/results.csv
