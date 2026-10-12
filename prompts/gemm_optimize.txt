@@ -10,6 +10,7 @@ Optimize the Vitis HLS 2025.2 C++ kernel below for a Xilinx Zynq-7020 FPGA, part
 The build flow disables automatic loop pipelining, so only directives written in the source take effect. Use the synthesis results and warnings provided below to decide what to change. The implementation must remain synthesizable by Vitis HLS 2025.2.
 
 2. Hard rules
+
 * Keep the function name exactly `gemm`.
 * Keep the function signature exactly as declared in gemm.h.
 * Do not edit, replace, or assume changes to gemm.h.
