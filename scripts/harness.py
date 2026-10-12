@@ -1,6 +1,7 @@
 # harness.py
-# One iteration of the LLM optimization loop:
-# build the prompt, ask the model, extract the code, synthesize it.
+# The LLM optimization loop: build the prompt, ask the model, extract the code,
+# skip duplicates, synthesize, and keep the best valid kernel.
+# Usage: py scripts/harness.py [full | metrics_only]
 
 # Part 1: imports
 import csv
@@ -36,6 +37,11 @@ def extract_code(reply):
     """Return the code inside the first ```cpp block, or None if there isn't one."""
     match = re.search(r"```(?:cpp|c\+\+)?[ \t]*\n(.*?)```", reply, re.DOTALL)
     return match.group(1).strip() if match else None
+
+def get_change(code):
+    """Return the model's one-line description of its change, from a '// CHANGE:' comment."""
+    match = re.search(r"//\s*CHANGE:\s*(.*)", code)
+    return match.group(1).strip()[:120] if match else "no description given"
 
 # Part 4: find_row(label) -> the results.csv row with that label
 def find_row(label):
@@ -108,6 +114,7 @@ def main():
     current_code = START_KERNEL.read_text(encoding="utf-8")
     current_warnings = get_warnings("unopt")
     history = []
+    seen = {current_code.strip(): "the starting kernel"}
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -133,26 +140,35 @@ def main():
         code = extract_code(reply)
         if code is None:
             row, status = None, "no_code"
+        elif code.strip() in seen:
+            row, status = None, "duplicate"
         else:
             print("Synthesizing...")
             row = run_variant(name, code)
             status = classify(row)
 
         # One-line summary for history and the screen
-        if row is None:
+        change = get_change(code) if code else "no code"
+        if status == "duplicate":
+            summary = f'iter{i}: "{change}" -> duplicate of {seen[code.strip()]}, not synthesized'
+        elif row is None:
             if status == "build_fail":
-                summary = f"iter{i}: {status}: {get_failure_reason(name)}"
+                summary = f'iter{i}: "{change}" -> {status}: {get_failure_reason(name)}'
             else:
-                summary = f"iter{i}: {status}"
+                summary = f'iter{i}: "{change}" -> {status}'
         else:
-            summary = (f"iter{i}: {status}, latency {row['latency_max']}, "
-                       f"DSP {row['dsp']}, LUT {row['lut']}, "
-                       f"est. clock {row['estimated_period_ns']} ns")
+            summary = (f'iter{i}: "{change}" -> {status}, latency {row["latency_max"]}, '
+                       f'DSP {row["dsp"]}, LUT {row["lut"]}, '
+                       f'est. clock {row["estimated_period_ns"]} ns')
         history.append(summary)
         print(summary)
 
+        # Remember this kernel so a repeat is caught next time
+        if code and status != "duplicate":
+            seen[code.strip()] = f"iter{i} ({status})"
+
         # Greedy: accept only a valid improvement
-        if status == "ok" and float(row["latency_max"])<float(current_row["latency_max"]):
+        if status == "ok" and float(row["latency_max"]) < float(current_row["latency_max"]):
             current_code = code
             current_row = row
             current_warnings = get_warnings(name)

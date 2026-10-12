@@ -20,6 +20,7 @@ The build flow disables automatic loop pipelining, so only directives written in
 * Stay compatible with the types, dimensions, and constants defined in gemm.h.
 * Do not rely on software-only behavior or unsupported compiler features.
 * Return only the complete C++ source file inside one cpp code block. Comments inside the code are welcome. Do not include explanations, analysis, or any other text outside the code block.
+* Begin the file with one comment line of the form `// CHANGE: <what you changed in a few words>`.
 
 3. Header and interface context
 The complete content of gemm.h. Treat it as fixed.
