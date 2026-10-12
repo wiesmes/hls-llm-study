@@ -19,6 +19,13 @@ add_files [file normalize $src]
 add_files -tb [file normalize $tb]
 set_part $part
 create_clock -period $period -name default
+
+# Disable auto-pipelining (default threshold is 64: any inner loop with
+# trip count <= 64 gets pipelined for free). With this at 0, only pragmas
+# written in the source take effect, so every CSV row reflects the code
+# and nothing the tool added on its own. The gemm_naive row was recorded
+# before this line existed; gemm_unopt is the same source with it.
+
 config_compile -pipeline_loops 0
 
 # 1. Correctness gate.
