@@ -5,6 +5,7 @@
 # Part 1: imports
 import csv
 import re
+import sys
 from pathlib import Path
 from datetime import datetime
 
@@ -91,8 +92,12 @@ def build_prompt(kernel, metrics, warnings="", history=""):
 
 # Part 6: main() -> run one iteration
 def main():
-    run_id = datetime.now().strftime("%Y%m%d_%H%M") 
-    print("Run ID:", run_id) # print date and time
+    condition = sys.argv[1] if len(sys.argv) > 1 else "full"
+    if condition not in ("full", "metrics_only"):
+        raise SystemExit(f"Unknown condition: {condition}")
+
+    run_id = datetime.now().strftime("%Y%m%d_%H%M") + "_" + condition
+    print("Run ID:", run_id)
 
     # Starting state
     current_row = find_row(START_LABEL)
@@ -110,8 +115,15 @@ def main():
         name = f"{run_id}_iter{i}"
         print(f"\n=== {name} ===")
 
+        if condition == "full":
+            warnings_text = current_warnings
+            history_text = "\n".join(history)
+        else:
+            warnings_text = ""
+            history_text = ""
+
         prompt = build_prompt(current_code, format_metrics(current_row),
-                              current_warnings, "\n".join(history))
+                              warnings_text, history_text)
         
         print("Asking model...")
         reply = ask(prompt)
