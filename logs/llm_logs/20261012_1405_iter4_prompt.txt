@@ -1,0 +1,106 @@
+You are optimizing a matrix multiplication kernel for FPGA hardware.
+
+1. Task
+Optimize the Vitis HLS 2025.2 C++ kernel below for a Xilinx Zynq-7020 FPGA, part number xc7z020clg400-1, at a 100 MHz target clock. Your primary goal is to minimize the kernel's latency while staying within these resource limits:
+
+* DSP: no more than 220
+* BRAM_18K: no more than 280
+* LUT: no more than 53,200
+* FF: no more than 106,400
+
+The build flow disables automatic loop pipelining, so only directives written in the source take effect. Use the synthesis results and warnings provided below to decide what to change. The implementation must remain synthesizable by Vitis HLS 2025.2.
+
+2. Hard rules
+
+* Keep the function name exactly `gemm`.
+* Keep the function signature exactly as declared in gemm.h.
+* Do not edit, replace, or assume changes to gemm.h.
+* The output must compute the same result as the original kernel. A testbench will check this, so do not change the mathematical behavior.
+* Use integer arithmetic only. Do not introduce floating-point arithmetic.
+* Stay compatible with the types, dimensions, and constants defined in gemm.h.
+* Do not rely on software-only behavior or unsupported compiler features.
+* Return only the complete C++ source file inside one cpp code block. Comments inside the code are welcome. Do not include explanations, analysis, or any other text outside the code block.
+
+3. Header and interface context
+The complete content of gemm.h. Treat it as fixed.
+
+```cpp
+#ifndef GEMM_H
+#define GEMM_H
+
+#include <stdint.h> // Include the header for fixed-width integer types
+
+#define N 32            //  Matrix size (32x32)
+typedef int16_t data_t; // input element type
+typedef int32_t acc_t; // accumulator/output type (avoids overflow)
+
+
+void gemm(data_t A[N][N], data_t B[N][N], acc_t C[N][N]);
+
+#endif // GEMM_H
+```
+
+4. Current kernel
+The complete C++ file you must improve. Use it as the starting point for this attempt.
+
+```cpp
+#include "gemm.h"
+
+void gemm(data_t A[N][N], data_t B[N][N], acc_t C[N][N]) {
+    #pragma HLS array_partition variable=A dim=1 complete
+    #pragma HLS array_partition variable=B dim=1 complete
+    #pragma HLS dataflow
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            acc_t sum = 0;
+            for (int k = 0; k < N; k++) {
+                #pragma HLS unroll factor=8
+                sum += A[i][k] * B[k][j];
+            }
+            C[i][j] = sum;
+        }
+    }
+}
+```
+
+5. Last synthesis result
+Measurements from the previous synthesis run of the current kernel. Use them as evidence when choosing the next change.
+
+```text
+label: gemm_20261012_1405_iter2
+timestamp: 2026-10-12T14:13:34
+top: gemm
+part: xc7z020-clg400-1
+target_period_ns: 10.00
+estimated_period_ns: 5.580
+latency_min: 40001
+latency_max: 40001
+interval_min: 40002
+lut: 2405
+ff: 1013
+bram: 0
+dsp: 8
+uram: 0
+```
+
+Initiation-interval or scheduling warnings from the synthesis log, if any. An empty block means none were recorded.
+
+```text
+WARNING: [HLS 214-114] Since the only kind of statements allowed in a canonical dataflow region are variable declarations and function calls, the compiler may not be able to correctly handle the region (C:/Users/wwa228/Desktop/hls-llm-study/kernels/gemm/gemm_20261012_1405_iter2.cpp:6:9)
+WARNING: [HLS 200-471] Dataflow form checks found 1 issue(s) in file C:/Users/wwa228/Desktop/hls-llm-study/kernels/gemm/gemm_20261012_1405_iter2.cpp
+INFO: [HLS 200-790] **** Loop Constraint Status: All loop constraints were satisfied.
+```
+
+Interpret the reported latency, initiation interval, and resource usage carefully. Do not assume a change improves performance just because it looks more parallel in the source code.
+
+6. History of previous attempts in this run
+Earlier attempts and their synthesis results, if any. Use it to avoid repeating changes that failed, exceeded the resource limits, or did not improve latency. An empty block means this is the first attempt.
+
+```text
+iter1: ok, latency 52289, DSP 4, LUT 1613, est. clock 6.471 ns
+iter2: ok, latency 40001, DSP 8, LUT 2405, est. clock 5.580 ns
+iter3: ok, latency 40001, DSP 8, LUT 2405, est. clock 5.580 ns
+```
+
+Choose one meaningful change based on the current kernel, the latest synthesis result, the warnings, and the history. Preserve correctness and the fixed interface above.
+Return only the complete updated C++ file inside one cpp code block.

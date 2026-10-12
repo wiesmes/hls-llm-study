@@ -1,0 +1,20 @@
+#include "gemm.h"
+
+void gemm(data_t A[N][N], data_t B[N][N], acc_t C[N][N]) {
+    #pragma HLS array_partition variable=A dim=1 complete
+    #pragma HLS array_partition variable=B dim=1 complete
+    #pragma HLS dataflow
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            acc_t sum = 0;
+            for (int k = 0; k < N; k += 16) {
+                #pragma HLS unroll factor=16
+                sum += A[i][k] * B[k][j] + A[i][k+1] * B[k+1][j] + A[i][k+2] * B[k+2][j] + A[i][k+3] * B[k+3][j] +
+                       A[i][k+4] * B[k+4][j] + A[i][k+5] * B[k+5][j] + A[i][k+6] * B[k+6][j] + A[i][k+7] * B[k+7][j] +
+                       A[i][k+8] * B[k+8][j] + A[i][k+9] * B[k+9][j] + A[i][k+10] * B[k+10][j] + A[i][k+11] * B[k+11][j] +
+                       A[i][k+12] * B[k+12][j] + A[i][k+13] * B[k+13][j] + A[i][k+14] * B[k+14][j] + A[i][k+15] * B[k+15][j];
+            }
+            C[i][j] = sum;
+        }
+    }
+}
