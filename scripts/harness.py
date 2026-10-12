@@ -6,6 +6,8 @@
 import csv
 import re
 from pathlib import Path
+from datetime import datetime
+
 
 from llm_client import ask
 from run_variant import run_variant
@@ -26,6 +28,7 @@ MAX_BRAM = 280      # BRAM_18K units, as reported by HLS
 MAX_LUT = 53200
 MAX_FF = 106400
 MAX_PERIOD_NS = 10.0
+N_ITERS = 10
 
 # Part 3: extract_code(reply) -> code string or None
 def extract_code(reply):
@@ -54,6 +57,17 @@ def get_warnings(name):
             kept.append(line[:300])
     return "\n".join(kept)
 
+def get_failure_reason(name):
+    """Return the first compiler error from this run's csim log, cleaned of the file path."""
+    log_path = ROOT/"build"/f"gemm_gemm_{name}"/"hls"/"csim"/"report"/"gemm_csim.log"
+    if not log_path.exists():
+        return "No csim log found."
+    for line in log_path.read_text(encoding = "utf-8", errors = "ignore").splitlines():
+        if "error:" in line:
+            return line.split("/")[-1][:300]
+
+    return "No error found in csim log."
+
 def classify(row):
     """Return 'build_fail', 'over_limit', 'timing_fail', or 'ok' for a run_variant result."""
     if row is None:
@@ -77,35 +91,62 @@ def build_prompt(kernel, metrics, warnings="", history=""):
 
 # Part 6: main() -> run one iteration
 def main():
-    name = "llm_iter1"
+    run_id = datetime.now().strftime("%Y%m%d_%H%M") 
+    print("Run ID:", run_id) # print date and time
 
-    start = find_row(START_LABEL)
-    if start is None:
+    # Starting state
+    current_row = find_row(START_LABEL)
+
+    if current_row is None:
         raise SystemExit(f"No row labeled {START_LABEL} in {RESULTS}")
+    
+    current_code = START_KERNEL.read_text(encoding="utf-8")
+    current_warnings = get_warnings("unopt")
+    history = []
 
-    prompt = build_prompt(START_KERNEL.read_text(encoding="utf-8"), format_metrics(start))
-
-    print("Asking model...")
-    reply = ask(prompt)
-
-    # Save the prompt and raw reply: you'll need these for the paper.
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    (LOG_DIR / f"{name}_prompt.txt").write_text(prompt, encoding="utf-8")
-    (LOG_DIR / f"{name}_reply.txt").write_text(reply, encoding="utf-8")
 
-    code = extract_code(reply)
-    if code is None:
-        print("FAIL: no code block in reply")
-        return
+    for i in range(1, N_ITERS + 1):
+        name = f"{run_id}_iter{i}"
+        print(f"\n=== {name} ===")
 
-    print("Synthesizing...")
-    row = run_variant(name, code)
-    if row is None:
-        print("FAIL: build failed (csim or csynth)")
-        return
+        prompt = build_prompt(current_code, format_metrics(current_row),
+                              current_warnings, "\n".join(history))
+        
+        print("Asking model...")
+        reply = ask(prompt)
+        (LOG_DIR / f"{name}_prompt.txt").write_text(prompt, encoding="utf-8")
+        (LOG_DIR / f"{name}_reply.txt").write_text(reply, encoding="utf-8")
 
-    print("OK:", row)
+        code = extract_code(reply)
+        if code is None:
+            row, status = None, "no_code"
+        else:
+            print("Synthesizing...")
+            row = run_variant(name, code)
+            status = classify(row)
 
+        # One-line summary for history and the screen
+        if row is None:
+            if status == "build_fail":
+                summary = f"iter{i}: {status}: {get_failure_reason(name)}"
+            else:
+                summary = f"iter{i}: {status}"
+        else:
+            summary = (f"iter{i}: {status}, latency {row['latency_max']}, "
+                       f"DSP {row['dsp']}, LUT {row['lut']}, "
+                       f"est. clock {row['estimated_period_ns']} ns")
+        history.append(summary)
+        print(summary)
+
+        # Greedy: accept only a valid improvement
+        if status == "ok" and float(row["latency_max"])<float(current_row["latency_max"]):
+            current_code = code
+            current_row = row
+            current_warnings = get_warnings(name)
+            print("Accepted as new current kernel.")
+
+    print("\nBest result:", format_metrics(current_row))
 
 if __name__ == "__main__":
     main()
