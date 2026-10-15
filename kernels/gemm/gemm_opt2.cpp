@@ -1,9 +1,9 @@
 #include "gemm.h"
 
-// No pragmas. This is the deliberate naive baseline.
+// opt2: opt1 + complete ARRAY_PARTITION along k (A dim=2, B dim=1). Reaches II=1.
 void gemm(data_t A[N][N], data_t B[N][N], acc_t C[N][N]) {
     #pragma HLS ARRAY_PARTITION variable=A dim=2 complete
-#pragma HLS ARRAY_PARTITION variable=B dim=1 complete
+    #pragma HLS ARRAY_PARTITION variable=B dim=1 complete
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             #pragma HLS PIPELINE II=1
