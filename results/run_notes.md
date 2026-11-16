@@ -29,7 +29,9 @@ Recorded 2026-11-16 (America/New_York).
 ## Attempt 10 synthesis retry
 
 `20261112_1425_full`, attempt 10, passed CSim originally, but its original synthesis
-log ended mid-process without a completed result. Its saved kernel was re-run on
+log ended mid-process without a completed result. This attempt is recorded as a
+synthesis failure in the original run and again on the 2026-11-16 re-run. The
+November 12 run is counted. Its saved kernel was re-run on
 2026-11-16, without any LLM call, using the unchanged Makefile/Tcl flow:
 
 ```bash
@@ -49,4 +51,17 @@ limits (53,200 LUT, 106,400 FF, 220 DSP, 280 BRAM_18K, 10 ns).
 
 The retry transcript is `results/20261112_1425_full_iter10_resynthesis.log`.
 Counting this run is explicitly requested by the study owner despite the
-unresolved original synthesis outcome. The batch has not been started.
+unresolved original synthesis outcome. At the time of that retry, the batch had
+not been started.
+
+## Batch launch
+
+- Batch started 2026-11-16T16:23:45-05:00 (EST), using commit
+  `3d2186fee9ca50ddd222192c546d167a7652f012`, with
+  `bash scripts/run_batch.sh 4 3` in a separate persistent Git Bash window.
+  The user confirmed sleep while plugged in was set to Never. No existing
+  harness, batch, make, or Vitis process was running before launch.
+- First run: `20261116_1623_metrics_only`. Attempt 1 saved a non-empty reply
+  and token counts (`prompt_eval_count: 1022`, `eval_count: 197`), completed
+  synthesis, and was accepted: 16,395 cycles, 1,484 LUT, 1,621 FF, 32 DSP,
+  0 BRAM_18K, estimated period 6.471 ns. The batch continued to attempt 2.
