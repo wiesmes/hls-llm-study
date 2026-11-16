@@ -1,6 +1,6 @@
 # Batch-mode Vitis HLS run. No GUI, ever.
 #
-# Usage (called by the Makefile, which sets these environment variables):
+#   Usage (called by the Makefile, which sets these environment variables):
 #   HLS_TOP HLS_SRC HLS_TB HLS_PART HLS_PERIOD HLS_PROJ
 #   vitis-run --mode hls --tcl scripts/run_hls.tcl
 
