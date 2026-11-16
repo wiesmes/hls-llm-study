@@ -1,0 +1,23 @@
+```cpp
+#include "gemm.h"
+
+// CHANGE: Use pipelining to reduce initiation interval and improve resource utilization
+void gemm(data_t A[N][N], data_t B[N][N], acc_t C[N][N]) {
+    for (int i = 0; i < N; i++) {
+#pragma HLS loop_tripcount max=N min=N
+        for (int j = 0; j < N; j++) {
+#pragma HLS loop_tripcount max=N min=N
+#pragma HLS pipeline II=1
+            acc_t sum = 0;
+            for (int k = 0; k < N; k += 4) {
+#pragma HLS unroll factor=4
+                sum += A[i][k] * B[k][j];
+                sum += A[i][k+1] * B[k+1][j];
+                sum += A[i][k+2] * B[k+2][j];
+                sum += A[i][k+3] * B[k+3][j];
+            }
+            C[i][j] = sum;
+        }
+    }
+}
+```

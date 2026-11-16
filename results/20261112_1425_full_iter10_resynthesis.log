@@ -1,0 +1,26 @@
+cd build/gemm_gemm_20261112_1425_full_iter10 && \
+	HLS_TOP=gemm HLS_SRC=../../kernels/gemm/gemm_20261112_1425_full_iter10.cpp HLS_TB=../../kernels/gemm/tb_gemm.cpp HLS_PART=xc7z020clg400-1 \
+	HLS_PERIOD=10 HLS_PROJ=. \
+	vitis-run --mode hls --tcl ../../scripts/run_hls.tcl
+
+****** vitis-run v2025.2 (64-bit)
+  **** SW Build 6295257 on 2025-11-13-08:29:27
+  **** Start of session at: Mon Nov 16 14:02:00 2026
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
+
+  **** HLS Build v2025.2 6295257
+Sourcing Tcl script 'C:/Users/wwa228/Desktop/hls-llm-study/build/gemm_gemm_20261112_1425_full_iter10/../../scripts/run_hls.tcl'
+INFO: [HLS 200-1510] Running: open_component -reset C:/Users/wwa228/hls-llm-study/build/gemm_gemm_20261112_1425_full_iter10 -flow_target vivado 
+INFO: [HLS 200-10] Creating and opening component 'C:/Users/wwa228/hls-llm-study/build/gemm_gemm_20261112_1425_full_iter10'.
+INFO: [HLS 200-10] Cleaning up the component database.
+can't create directory "C:/Users/wwa228/hls-llm-study": permission denied
+    while executing
+"source C:/Users/wwa228/Desktop/hls-llm-study/build/gemm_gemm_20261112_1425_full_iter10/../../scripts/run_hls.tcl"
+    ("uplevel" body line 1)
+    invoked from within
+"uplevel \#0 [list source $tclfile] "
+
+INFO: [HLS 200-112] Total CPU user time: 1 seconds. Total CPU system time: 4 seconds. Total elapsed time: 6.747 seconds; peak allocated memory: 30.375 MB.
+INFO: [vitis-run 60-1662] Stopping dispatch session having empty uuid.
+make: *** [bench] Error 1

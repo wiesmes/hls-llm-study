@@ -1,0 +1,30 @@
+```cpp
+#include "gemm.h"
+
+// CHANGE: Reduce initiation interval by pipelining the outer loop and unrolling the inner loop
+void gemm(data_t A[N][N], data_t B[N][N], acc_t C[N][N]) {
+    for (int i = 0; i < N; i++) {
+#pragma HLS loop_tripcount max=N min=N
+        for (int j = 0; j < N; j += 8) {
+#pragma HLS loop_tripcount max=N min=N
+#pragma HLS pipeline II=1
+            acc_t sum[8] = {0};
+            for (int k = 0; k < N; k++) {
+#pragma HLS loop_tripcount max=N min=N
+                sum[0] += A[i][k] * B[k][j];
+                sum[1] += A[i][k] * B[k][j+1];
+                sum[2] += A[i][k] * B[k][j+2];
+                sum[3] += A[i][k] * B[k][j+3];
+                sum[4] += A[i][k] * B[k][j+4];
+                sum[5] += A[i][k] * B[k][j+5];
+                sum[6] += A[i][k] * B[k][j+6];
+                sum[7] += A[i][k] * B[k][j+7];
+            }
+            for (int k = 0; k < 8; k++) {
+#pragma HLS loop_tripcount max=8 min=8
+                C[i][j+k] = sum[k];
+            }
+        }
+    }
+}
+```

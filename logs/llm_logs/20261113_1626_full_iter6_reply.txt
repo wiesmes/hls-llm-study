@@ -1,0 +1,27 @@
+```cpp
+#include "gemm.h"
+
+// CHANGE: Optimize memory access patterns and reduce initiation interval
+void gemm(data_t A[N][N], data_t B[N][N], acc_t C[N][N]) {
+    for (int i = 0; i < N; i++) {
+#pragma HLS loop_tripcount max=N min=N
+        for (int j = 0; j < N; j++) {
+#pragma HLS loop_tripcount max=N min=N
+#pragma HLS pipeline II=1
+            acc_t sum = 0;
+            for (int k = 0; k < N; k += 4) {
+#pragma HLS unroll factor=4
+                data_t a1 = A[i][k];
+                data_t a2 = A[i][k+1];
+                data_t a3 = A[i][k+2];
+                data_t a4 = A[i][k+3];
+                sum += a1 * B[k][j];
+                sum += a2 * B[k+1][j];
+                sum += a3 * B[k+2][j];
+                sum += a4 * B[k+3][j];
+            }
+            C[i][j] = sum;
+        }
+    }
+}
+```

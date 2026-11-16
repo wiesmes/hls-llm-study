@@ -1,0 +1,25 @@
+```cpp
+#include "gemm.h"
+
+// CHANGE: Unroll the outer loop for better parallelism and reduce the initiation interval
+void gemm(data_t A[N][N], data_t B[N][N], acc_t C[N][N]) {
+    for (int i = 0; i < N; i += 4) {
+#pragma HLS unroll factor=4
+        for (int j = 0; j < N; j++) {
+#pragma HLS loop_tripcount max=N min=N
+            acc_t sum0 = 0, sum1 = 0, sum2 = 0, sum3 = 0;
+            for (int k = 0; k < N; k++) {
+#pragma HLS loop_tripcount max=N min=N
+                sum0 += A[i][k] * B[k][j];
+                sum1 += A[i+1][k] * B[k][j];
+                sum2 += A[i+2][k] * B[k][j];
+                sum3 += A[i+3][k] * B[k][j];
+            }
+            C[i][j] = sum0;
+            C[i+1][j] = sum1;
+            C[i+2][j] = sum2;
+            C[i+3][j] = sum3;
+        }
+    }
+}
+```
