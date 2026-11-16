@@ -65,3 +65,5 @@ not been started.
   and token counts (`prompt_eval_count: 1022`, `eval_count: 197`), completed
   synthesis, and was accepted: 16,395 cycles, 1,484 LUT, 1,621 FF, 32 DSP,
   0 BRAM_18K, estimated period 6.471 ns. The batch continued to attempt 2.
+
+20261116_1623_metrics_only: PC was put to sleep during attempt 2's synthesis (about 16:28 to 17:35 EST). The run resumed in the same process; attempt 2's result (16,395 cycles, matching attempt 1's design) is unaffected.
