@@ -11,7 +11,7 @@ from pathlib import Path
 from datetime import datetime
 
 
-from llm_client import ask
+from llm_client import ask, save_counts
 from run_variant import run_variant
 
 
@@ -37,6 +37,12 @@ def extract_code(reply):
     """Return the code inside the first ```cpp block, or None if there isn't one."""
     match = re.search(r"```(?:cpp|c\+\+)?[ \t]*\n(.*?)```", reply, re.DOTALL)
     return match.group(1).strip() if match else None
+
+def normalize(code):
+    """Strip comments and whitespace so kernels that differ only cosmetically count as the same."""
+    code = re.sub(r"//.*", "", code)                         # remove // comments
+    code = re.sub(r"/\*.*?\*/", "", code, flags=re.DOTALL)   # remove /* */ comments
+    return re.sub(r"\s+", "", code)                          # remove all whitespace
 
 def get_change(code):
     """Return the model's one-line description of its change, from a '// CHANGE:' comment."""
@@ -70,10 +76,24 @@ def get_failure_reason(name):
     if not log_path.exists():
         return "No csim log found."
     for line in log_path.read_text(encoding = "utf-8", errors = "ignore").splitlines():
+        if "mismatches" in line:
+            return line.strip()[:300]
         if "error:" in line:
             return line.split("/")[-1][:300]
 
     return "No error found in csim log."
+
+def failure_type(name):
+    """Say why a kernel produced no CSV row: tool_error, wrong_result, compile_error, or synth_fail."""
+    log_path = ROOT/"build"/f"gemm_gemm_{name}"/"hls"/"csim"/"report"/"gemm_csim.log"
+    if not log_path.exists():
+        return "tool_error"      # csim never ran: a setup problem, not the model
+    log = log_path.read_text(encoding="utf-8", errors="ignore")
+    if "mismatches" in log:      # checked first: a wrong-result log also has ERROR lines
+        return "wrong_result"
+    if "error:" in log:
+        return "compile_error"
+    return "synth_fail"          # csim passed, so synthesis must have failed
 
 def classify(row):
     """Return 'build_fail', 'over_limit', 'timing_fail', or 'ok' for a run_variant result."""
@@ -110,11 +130,12 @@ def main():
 
     if current_row is None:
         raise SystemExit(f"No row labeled {START_LABEL} in {RESULTS}")
-    
+
     current_code = START_KERNEL.read_text(encoding="utf-8")
     current_warnings = get_warnings("unopt")
+    print("Start warnings length:", len(current_warnings))  # 0 means get_warnings can't find hls.log (Fix 2)
     history = []
-    seen = {current_code.strip(): "the starting kernel"}
+    seen = {normalize(current_code): "the starting kernel"}
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -131,28 +152,33 @@ def main():
 
         prompt = build_prompt(current_code, format_metrics(current_row),
                               warnings_text, history_text)
-        
+
         print("Asking model...")
         reply = ask(prompt)
         (LOG_DIR / f"{name}_prompt.txt").write_text(prompt, encoding="utf-8")
         (LOG_DIR / f"{name}_reply.txt").write_text(reply, encoding="utf-8")
+        save_counts(LOG_DIR / f"{name}_counts.json")
 
         code = extract_code(reply)
         if code is None:
             row, status = None, "no_code"
-        elif code.strip() in seen:
+        elif normalize(code) in seen:
             row, status = None, "duplicate"
         else:
             print("Synthesizing...")
             row = run_variant(name, code)
             status = classify(row)
+            if status == "build_fail":
+                status = failure_type(name)
+                if status == "tool_error":
+                    raise SystemExit(f"{name}: csim never ran. Fix the setup, then rerun.")
 
         # One-line summary for history and the screen
         change = get_change(code) if code else "no code"
         if status == "duplicate":
-            summary = f'iter{i}: "{change}" -> duplicate of {seen[code.strip()]}, not synthesized'
+            summary = f'iter{i}: "{change}" -> duplicate of {seen[normalize(code)]}, not synthesized'
         elif row is None:
-            if status == "build_fail":
+            if status in ("wrong_result", "compile_error", "synth_fail"):
                 summary = f'iter{i}: "{change}" -> {status}: {get_failure_reason(name)}'
             else:
                 summary = f'iter{i}: "{change}" -> {status}'
@@ -165,7 +191,7 @@ def main():
 
         # Remember this kernel so a repeat is caught next time
         if code and status != "duplicate":
-            seen[code.strip()] = f"iter{i} ({status})"
+            seen[normalize(code)] = f"iter{i} ({status})"
 
         # Greedy: accept only a valid improvement
         if status == "ok" and float(row["latency_max"]) < float(current_row["latency_max"]):

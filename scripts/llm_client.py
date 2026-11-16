@@ -1,6 +1,9 @@
 # llm_client.py
 # Sends a prompt to the local Ollama server and returns the model's reply.
 
+import json
+from pathlib import Path
+
 import requests
 
 # Step 1: the address and the model name (the URL and "model" from the curl test)
@@ -12,9 +15,9 @@ def ask(prompt):
     payload = {
         "model": OLLAMA_MODEL,
         "prompt": prompt,
-        "stream": False
+        "stream": False,
+        "options": {"temperature": 0.8, "num_ctx": 4096}
     }
-#         (the same three keys you sent with curl's -d)
 
 # Step 3: send it to the server and wait for the reply
 
@@ -22,6 +25,13 @@ def ask(prompt):
 
 # Step 4: read the JSON reply and return the "response" field
     if response.status_code == 200:
-        return response.json()["response"]
+        data = response.json()
+        ask.last_counts = {key: data.get(key) for key in ("prompt_eval_count", "eval_count")}
+        return data["response"]
     else:
         raise Exception(f"Request failed with status code {response.status_code}: {response.text}")
+
+
+def save_counts(path):
+    """Save token counts for the most recent successful ask(), without changing its return type."""
+    Path(path).write_text(json.dumps(ask.last_counts, indent=2) + "\n", encoding="utf-8")
